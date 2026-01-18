@@ -1,6 +1,6 @@
 # LabTracker Pro
 
-This is a Next.js application for tracking and managing lab performance, built within Firebase Studio.
+This is a Next.js application for tracking and managing lab performance with Firebase Support.
 
 ## Setup Instructions
 
