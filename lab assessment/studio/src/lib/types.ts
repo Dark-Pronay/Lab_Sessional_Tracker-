@@ -11,13 +11,33 @@ export interface AppUser {
   schoolId: string;
 }
 
-// Basic course interface for auth context
-export interface BasicCourse {
+// Developer 2's Course Management Types
+export interface Course {
   id: string;
   courseName: string;
   courseCode: string;
   teacherId: string;
+  joinCode: string;
+  teacherName?: string;
+  credit: number;
 }
 
-// Note: Extended course, enrollment, and performance types 
-// will be added by Developer 2 and Developer 3
+export interface Enrollment {
+  id: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  teacherId: string;
+  studentSchoolId?: string;
+  enrollmentDate: any; // Can be Date or FieldValue
+  finalGrade?: string;
+  totalMarks?: number;
+}
+
+export interface CourseJoinCode {
+  courseId: string;
+  teacherId: string;
+}
+
+// Note: Performance and Attendance types will be added by Developer 3
