@@ -1,0 +1,40 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-landing",
+      "description": "A modern classroom setting with students using laptops.",
+      "imageUrl": "https://images.unsplash.com/photo-1758270704534-fd9715bffc0e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjbGFzc3Jvb20lMjB0ZWNobm9sb2d5fGVufDB8fHx8MTc2ODU3MDA1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "classroom technology"
+    },
+    {
+      "id": "avatar-1",
+      "description": "Placeholder avatar for a user.",
+      "imageUrl": "https://images.unsplash.com/photo-1521119989659-a83eee488004?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3Njg1NjA0NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "avatar-2",
+      "description": "Placeholder avatar for another user.",
+      "imageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3Njg1NjA0NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "course-thumbnail-1",
+      "description": "Placeholder for course thumbnail",
+      "imageUrl": "https://images.unsplash.com/photo-1531169509526-f8f1fdaa4a67?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzY2llbmNlJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzY4NTE3NjY0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "science abstract"
+    },
+    {
+      "id": "course-thumbnail-2",
+      "description": "Placeholder for course thumbnail",
+      "imageUrl": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWNobm9sb2d5JTIwYWJzdHJhY3R8ZW58MHx8fHwxNzY4NDY3MjU0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "technology abstract"
+    },
+    {
+      "id": "course-thumbnail-3",
+      "description": "Placeholder for course thumbnail",
+      "imageUrl": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkYXRhJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzY4NTcwMDUwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "data abstract"
+    }
+  ]
+}
