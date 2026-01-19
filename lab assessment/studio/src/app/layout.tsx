@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { AuthProvider } from '@/contexts/auth-context';
+import { Chatbot } from '@/components/chatbot/chatbot';
 
 export const metadata: Metadata = {
   title: 'LabTracker Pro',
@@ -32,6 +33,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AuthProvider>
             {children}
+            <Chatbot />
             <Toaster />
           </AuthProvider>
         </FirebaseClientProvider>

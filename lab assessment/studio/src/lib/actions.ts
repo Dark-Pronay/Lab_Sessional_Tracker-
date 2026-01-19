@@ -15,7 +15,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import type { AppUser, Course, Enrollment } from './types';
+import type { AppUser, Course, Enrollment, Performance, Attendance, PerformanceAnalytics } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -199,4 +199,204 @@ export async function getEnrollmentsByStudent(firestore: Firestore, studentId: s
     id: doc.id,
     ...doc.data()
   } as Enrollment));
+}
+
+// Developer 3: Analytics & AI Actions
+// Performance tracking, analytics, and AI-powered grade calculation
+
+export async function saveStudentPerformanceAction(
+  { enrollmentId, week, status, labMarks, quizScore, vivaScore }: {
+    enrollmentId: string,
+    week: number,
+    status: 'present' | 'absent' | 'unmarked',
+    labMarks: number,
+    quizScore: number,
+    vivaScore: number
+  }
+) {
+  const firestore = (await import('@/firebase')).getSdks((await import('firebase/app')).getApp()).firestore;
+  const batch = writeBatch(firestore);
+
+  // 1. Handle Attendance
+  if (status !== 'unmarked') {
+    const attendanceCol = collection(firestore, 'enrollments', enrollmentId, 'attendance');
+    const attendanceQuery = query(attendanceCol, where('week', '==', week));
+    const attendanceSnap = await getDocs(attendanceQuery);
+    const attendanceData = { week, status, date: serverTimestamp(), enrollmentId };
+    
+    if (attendanceSnap.empty) {
+      const attendanceRef = doc(attendanceCol);
+      batch.set(attendanceRef, attendanceData);
+    } else {
+      batch.update(attendanceSnap.docs[0].ref, attendanceData);
+    }
+  }
+
+  // 2. Handle Performance
+  const performanceCol = collection(firestore, 'enrollments', enrollmentId, 'performance');
+  const performanceQuery = query(performanceCol, where('week', '==', week));
+  const performanceSnap = await getDocs(performanceQuery);
+  const performanceData = { week, labMarks, quizScore, vivaScore, enrollmentId };
+
+  if (performanceSnap.empty) {
+    const performanceRef = doc(performanceCol);
+    batch.set(performanceRef, performanceData);
+  } else {
+    batch.update(performanceSnap.docs[0].ref, performanceData);
+  }
+
+  await batch.commit().catch((error) => {
+    const permissionError = new FirestorePermissionError({
+      path: `enrollments/${enrollmentId}/performance`,
+      operation: 'write',
+      requestResourceData: performanceData,
+    });
+    errorEmitter.emit('permission-error', permissionError);
+    throw error;
+  });
+}
+
+export async function calculateAndSaveFinalGradeAction(enrollmentId: string) {
+  const firestore = (await import('@/firebase')).getSdks((await import('firebase/app')).getApp()).firestore;
+
+  const enrollmentRef = doc(firestore, 'enrollments', enrollmentId);
+  const enrollmentSnap = await getDoc(enrollmentRef);
+  if (!enrollmentSnap.exists()) {
+    throw new Error(`Enrollment with ID ${enrollmentId} not found.`);
+  }
+  const enrollmentData = enrollmentSnap.data() as Enrollment;
+
+  const courseRef = doc(firestore, 'courses', enrollmentData.courseId);
+  const courseSnap = await getDoc(courseRef);
+  if (!courseSnap.exists()) {
+      throw new Error(`Course with ID ${enrollmentData.courseId} not found.`);
+  }
+  const courseData = courseSnap.data() as Partial<Course>;
+
+  // 1. Fetch all performance and attendance for the enrollment
+  const performanceQuery = collection(firestore, 'enrollments', enrollmentId, 'performance');
+  const attendanceQuery = collection(firestore, 'enrollments', enrollmentId, 'attendance');
+  
+  const [performanceSnap, attendanceSnap] = await Promise.all([
+    getDocs(performanceQuery),
+    getDocs(attendanceQuery),
+  ]);
+
+  const performances = performanceSnap.docs.map(d => d.data() as Performance);
+  const attendances = attendanceSnap.docs.map(d => d.data() as Attendance);
+
+  if (performances.length === 0) {
+    throw new Error("No performance data found for this student to calculate a grade.");
+  }
+  
+  // 2. Aggregate raw scores
+  const totalLabMarks = performances.reduce((sum, p) => sum + p.labMarks, 0);
+  
+  const week12Performance = performances.find(p => p.week === 12);
+  const quizScore = week12Performance?.quizScore || 0;
+  const vivaScore = week12Performance?.vivaScore || 0;
+
+  const presentCount = attendances.filter(a => a.status === 'present').length;
+  const totalAttendanceRecords = attendances.length || 1;
+  const attendancePercentage = (presentCount / totalAttendanceRecords) * 100;
+
+  // 3. Define max scores and weights from the new rubric
+  const credit = courseData.credit ?? 1.5;
+  const MAX_TOTAL_LAB_MARKS = credit * 100;
+  const MAX_QUIZ_SCORE = 15;
+  const MAX_VIVA_SCORE = 15;
+  
+  const WEIGHT_LAB = 0.60;
+  const WEIGHT_QUIZ = 0.15;
+  const WEIGHT_VIVA = 0.15;
+  const WEIGHT_ATTENDANCE = 0.10;
+
+  // 4. Calculate final percentage score
+  const cappedLabMarks = Math.min(totalLabMarks, MAX_TOTAL_LAB_MARKS);
+  const cappedQuizScore = Math.min(quizScore, MAX_QUIZ_SCORE);
+  const cappedVivaScore = Math.min(vivaScore, MAX_VIVA_SCORE);
+
+  const weightedLabScore = (cappedLabMarks / MAX_TOTAL_LAB_MARKS) * (100 * WEIGHT_LAB);
+  const weightedQuizScore = (cappedQuizScore / MAX_QUIZ_SCORE) * (100 * WEIGHT_QUIZ);
+  const weightedVivaScore = (cappedVivaScore / MAX_VIVA_SCORE) * (100 * WEIGHT_VIVA);
+  const weightedAttendanceScore = (attendancePercentage / 100) * (100 * WEIGHT_ATTENDANCE);
+  
+  const totalPercentage = weightedLabScore + weightedQuizScore + weightedVivaScore + weightedAttendanceScore;
+
+  // 5. Call AI flow to determine letter grade
+  const { calculateFinalGrade } = await import('@/ai/flows/calculate-final-grade');
+  const aiResult = await calculateFinalGrade({
+    totalPercentage,
+    weightedScores: {
+        lab: weightedLabScore.toFixed(2),
+        quiz: weightedQuizScore.toFixed(2),
+        viva: weightedVivaScore.toFixed(2),
+        attendance: weightedAttendanceScore.toFixed(2),
+    },
+    actualScores: {
+        totalLabMarks: cappedLabMarks,
+        quizScore: cappedQuizScore,
+        vivaScore: cappedVivaScore,
+        attendancePercentage: attendancePercentage.toFixed(2),
+    },
+    maxScores: {
+        lab: MAX_TOTAL_LAB_MARKS,
+        quiz: MAX_QUIZ_SCORE,
+        viva: MAX_VIVA_SCORE,
+    }
+  });
+
+  // 6. Save result to enrollment document
+  const finalMarks = parseFloat(totalPercentage.toFixed(2));
+  const updateData = {
+      finalGrade: aiResult.finalGrade,
+      totalMarks: finalMarks,
+  };
+  await updateDoc(enrollmentRef, updateData)
+    .catch((error) => {
+        const permissionError = new FirestorePermissionError({
+            path: enrollmentRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw error;
+    });
+
+  return { ...aiResult, totalMarks: finalMarks };
+}
+
+export async function getPerformanceAnalytics(firestore: Firestore, enrollmentId: string): Promise<PerformanceAnalytics | null> {
+  const performanceQuery = collection(firestore, 'enrollments', enrollmentId, 'performance');
+  const attendanceQuery = collection(firestore, 'enrollments', enrollmentId, 'attendance');
+  
+  const [performanceSnap, attendanceSnap] = await Promise.all([
+    getDocs(performanceQuery),
+    getDocs(attendanceQuery),
+  ]);
+
+  const performances = performanceSnap.docs.map(d => d.data() as Performance);
+  const attendances = attendanceSnap.docs.map(d => d.data() as Attendance);
+
+  if (performances.length === 0) return null;
+
+  const totalLabMarks = performances.reduce((sum, p) => sum + p.labMarks, 0);
+  const week12Performance = performances.find(p => p.week === 12);
+  const quizScore = week12Performance?.quizScore || 0;
+  const vivaScore = week12Performance?.vivaScore || 0;
+
+  const presentCount = attendances.filter(a => a.status === 'present').length;
+  const attendancePercentage = attendances.length > 0 ? (presentCount / attendances.length) * 100 : 0;
+
+  // Calculate weighted final percentage (simplified)
+  const finalPercentage = (totalLabMarks * 0.6) + (quizScore * 0.15) + (vivaScore * 0.15) + (attendancePercentage * 0.1);
+
+  return {
+    totalLabMarks,
+    quizScore,
+    vivaScore,
+    attendancePercentage,
+    finalPercentage,
+    letterGrade: finalPercentage >= 90 ? 'A' : finalPercentage >= 80 ? 'B' : finalPercentage >= 70 ? 'C' : 'F'
+  };
 }

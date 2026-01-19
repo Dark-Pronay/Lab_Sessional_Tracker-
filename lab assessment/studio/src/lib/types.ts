@@ -40,4 +40,52 @@ export interface CourseJoinCode {
   teacherId: string;
 }
 
-// Note: Performance and Attendance types will be added by Developer 3
+// Developer 3's Performance & Analytics Types
+export interface Attendance {
+  id: string;
+  enrollmentId: string;
+  week: number;
+  date: string;
+  status: 'present' | 'absent';
+}
+
+export interface Performance {
+  id: string;
+  enrollmentId: string;
+  week: number;
+  labMarks: number;
+  quizScore: number;
+  vivaScore: number;
+}
+
+export interface FinalGrade {
+  id: string;
+  enrollmentId: string;
+  finalGrade: string;
+  totalMarks: number;
+  calculatedAt: Date;
+}
+
+export interface PerformanceAnalytics {
+  totalLabMarks: number;
+  quizScore: number;
+  vivaScore: number;
+  attendancePercentage: number;
+  finalPercentage: number;
+  letterGrade: string;
+}
+
+export interface WeeklyPerformance {
+  week: number;
+  labMarks: number;
+  quizScore: number;
+  vivaScore: number;
+  attendance: 'present' | 'absent' | 'unmarked';
+}
+
+export interface GradingWeights {
+  lab: number;
+  quiz: number;
+  viva: number;
+  attendance: number;
+}
